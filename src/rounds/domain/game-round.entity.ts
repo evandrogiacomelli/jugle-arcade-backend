@@ -1,4 +1,3 @@
-
 import {
     Entity,
     PrimaryKey,
@@ -11,8 +10,11 @@ export class GameRound {
     id!: number;
 
     @Property({ type: 'string' })
-    status = 'PENDING';
+    status: string = 'PENDING';
+
+    @Property({ type: 'number' })
+    mineCount!: number;
 
     @Property({ type: Date })
-    createdAt = new Date();
+    createdAt: Date = new Date();
 }

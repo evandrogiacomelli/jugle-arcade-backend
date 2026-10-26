@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { defineConfig } from '@mikro-orm/postgresql';
-import {GameRound} from "./rounds/domain/game-round.entity";
+import { GameRound } from "./rounds/domain/game-round.entity";
+import { RoundsModule } from "./rounds/rounds.module";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import {GameRound} from "./rounds/domain/game-round.entity";
           allowGlobalContext: false,
         }),
     ),
+      RoundsModule
   ],
 })
 export class AppModule {}
