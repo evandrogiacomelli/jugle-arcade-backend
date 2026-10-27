@@ -42,9 +42,35 @@ describe('revealPosition', () => {
     });
 
     it('should reject a position that was already revealed', () => {
-        const round = createRound();
+        const round = createRound([3]);
+
         revealPosition(round, 5);
 
-        expect(() => revealPosition(round, 5)).toThrow();
+        expect(() => revealPosition(round, 5)).toThrow(
+            'Position already revealed',
+        );
+    });
+
+    it('should reject a reveal after the round is lost', () => {
+        const round = createRound([3]);
+
+        revealPosition(round, 3);
+
+        expect(() => revealPosition(round, 5)).toThrow(
+            'Round is already finished',
+        );
+    });
+
+    it('should reject a reveal after the round is won', () => {
+        const round = createRound([24]);
+
+        for (let position = 0; position < 24; position++) {
+            revealPosition(round, position);
+        }
+
+        expect(round.status).toBe('WON');
+        expect(() => revealPosition(round, 0)).toThrow(
+            'Round is already finished',
+        );
     });
 });

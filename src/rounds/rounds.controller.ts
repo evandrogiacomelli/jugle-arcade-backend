@@ -37,20 +37,6 @@ export class RoundsController {
         return round;
     }
 
-    // @Post(':id/reveal')
-    // async reveal(
-    //     @Param('id', ParseIntPipe) id: number,
-    //     @Body() dto: RevealPositionDto,
-    // ) {
-    //     const result = await this.roundsService.reveal(id, dto.position);
-    //
-    //     if (!result) {
-    //         throw new NotFoundException('Round not found');
-    //     }
-    //
-    //     return result;
-    // }
-
     @Post(':id/reveal')
     async reveal(
         @Param('id', ParseIntPipe) id: number,

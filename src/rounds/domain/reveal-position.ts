@@ -7,7 +7,7 @@ export function revealPosition(
     round: GameRound,
     position: number,
 ): RevealResult {
-    if (!Number.isInteger(position) || position <= 0 || position >= 25) {
+    if (!Number.isInteger(position) || position < 0 || position >= 25) {
         throw new RoundDomainException('Position must be between 0 and 24');
     }
 
