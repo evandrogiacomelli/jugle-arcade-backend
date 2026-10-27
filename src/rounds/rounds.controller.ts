@@ -12,6 +12,9 @@ import {
 
 import { CreateRoundDto } from './dto/create-round.dto';
 import { RoundsService } from './rounds.service';
+import { RevealPositionDto } from './dto/reveal-position.dto';
+import { BadRequestException } from '@nestjs/common';
+import { RoundDomainException } from './domain/round-domain.exception';
 
 @Controller('rounds')
 export class RoundsController {
@@ -32,6 +35,42 @@ export class RoundsController {
         }
 
         return round;
+    }
+
+    // @Post(':id/reveal')
+    // async reveal(
+    //     @Param('id', ParseIntPipe) id: number,
+    //     @Body() dto: RevealPositionDto,
+    // ) {
+    //     const result = await this.roundsService.reveal(id, dto.position);
+    //
+    //     if (!result) {
+    //         throw new NotFoundException('Round not found');
+    //     }
+    //
+    //     return result;
+    // }
+
+    @Post(':id/reveal')
+    async reveal(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: RevealPositionDto,
+    ) {
+        try {
+            const result = await this.roundsService.reveal(id, dto.position);
+
+            if (!result) {
+                throw new NotFoundException('Round not found');
+            }
+
+            return result;
+        } catch (error) {
+            if (error instanceof RoundDomainException) {
+                throw new BadRequestException(error.message);
+            }
+
+            throw error;
+        }
     }
 
 }

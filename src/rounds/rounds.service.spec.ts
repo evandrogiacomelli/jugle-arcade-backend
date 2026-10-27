@@ -9,6 +9,7 @@ describe('RoundsService', () => {
         create: jest.Mock;
         persist: jest.Mock;
         flush: jest.Mock;
+        findOne: jest.Mock;
     };
 
     beforeEach(async () => {
@@ -20,6 +21,7 @@ describe('RoundsService', () => {
             })),
             persist: jest.fn(),
             flush: jest.fn(),
+            findOne: jest.fn(),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -56,5 +58,65 @@ describe('RoundsService', () => {
             mineCount: 5,
             createdAt: expect.any(Date),
         });
+    });
+
+    it('should return null when round does not exist', async () => {
+
+        em.findOne = jest.fn().mockResolvedValue(null);
+
+        const result = await service.reveal(999, 5);
+
+        expect(result).toBeNull();
+        expect(em.flush).not.toHaveBeenCalled();
+    });
+
+    it('should reveal a safe position', async () => {
+        const round = {
+            id: 1,
+            status: 'PENDING',
+            mineCount: 1,
+            minePositions: [3],
+            revealedPositions: [],
+            createdAt: new Date(),
+        };
+
+        em.findOne.mockResolvedValue(round);
+
+        const result = await service.reveal(1, 5);
+
+        expect(result).toMatchObject({
+            id: 1,
+            status: 'IN_PROGRESS',
+            position: 5,
+            result: 'SAFE',
+            revealedPositions: [5],
+        });
+
+        expect(em.flush).toHaveBeenCalled();
+    });
+
+    it('should lose when revealing a mine', async () => {
+        const round = {
+            id: 1,
+            status: 'PENDING',
+            mineCount: 1,
+            minePositions: [3],
+            revealedPositions: [],
+            createdAt: new Date(),
+        };
+
+        em.findOne.mockResolvedValue(round);
+
+        const result = await service.reveal(1, 3);
+
+        expect(result).toMatchObject({
+            id: 1,
+            status: 'LOST',
+            position: 3,
+            result: 'MINE',
+            revealedPositions: [3],
+        });
+
+        expect(em.flush).toHaveBeenCalled();
     });
 });

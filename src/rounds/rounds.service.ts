@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { GameRound } from './domain/game-round.entity';
 import { CreateRoundDto } from './dto/create-round.dto';
+import { revealPosition } from './domain/reveal-position';
 
 @Injectable()
 export class RoundsService {
@@ -40,6 +41,26 @@ export class RoundsService {
             mineCount: round.mineCount,
             revealedPositions: round.revealedPositions,
             createdAt: round.createdAt,
+        };
+    }
+
+    async reveal(id: number, position: number) {
+        const round = await this.em.findOne(GameRound, { id });
+
+        if (!round) {
+            return null;
+        }
+
+        const result = revealPosition(round, position);
+
+        await this.em.flush();
+
+        return {
+            id: round.id,
+            status: round.status,
+            position,
+            result,
+            revealedPositions: round.revealedPositions,
         };
     }
 }

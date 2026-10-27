@@ -27,6 +27,14 @@ describe('RoundsController (e2e)', () => {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       }
     }),
+
+    reveal: jest.fn().mockImplementation(async (id: number, position: number) => ({
+      id,
+      status: position === 3 ? 'LOST' : 'IN_PROGRESS',
+      position,
+      result: position === 3 ? 'MINE' : 'SAFE',
+      revealedPositions: [position],
+    })),
   };
 
   beforeAll(async () => {
@@ -52,6 +60,8 @@ describe('RoundsController (e2e)', () => {
 
   beforeEach(() => {
     roundsService.create.mockClear();
+    roundsService.findById.mockClear();
+    roundsService.reveal.mockClear();
   });
 
   afterAll(async () => {
@@ -123,5 +133,31 @@ describe('RoundsController (e2e)', () => {
     await request(app.getHttpServer())
         .get('/rounds/999')
         .expect(404);
+  });
+
+  it('should reveal a safe position', async () => {
+    const response = await request(app.getHttpServer())
+        .post('/rounds/1/reveal')
+        .send({ position: 5 })
+        .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: 1,
+      status: 'IN_PROGRESS',
+      position: 5,
+      result: 'SAFE',
+      revealedPositions: [5],
+    });
+
+    expect(roundsService.reveal).toHaveBeenCalledWith(1, 5);
+  });
+
+  it('should reject an invalid position', async () => {
+    await request(app.getHttpServer())
+        .post('/rounds/1/reveal')
+        .send({ position: 25 })
+        .expect(400);
+
+    expect(roundsService.reveal).not.toHaveBeenCalled();
   });
 });

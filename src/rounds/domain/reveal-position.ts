@@ -1,4 +1,5 @@
 import {GameRound} from "./game-round.entity";
+import { RoundDomainException } from './round-domain.exception';
 
 export type RevealResult = 'SAFE' | 'MINE';
 
@@ -7,15 +8,15 @@ export function revealPosition(
     position: number,
 ): RevealResult {
     if (!Number.isInteger(position) || position <= 0 || position >= 25) {
-        throw new Error('Position must be between 0 and 24');
+        throw new RoundDomainException('Position must be between 0 and 24');
     }
 
     if (round.status == 'WON' || round.status == 'LOST') {
-        throw new Error('Round is already finished');
+        throw new RoundDomainException('Round is already finished');
     }
 
     if (round.revealedPositions.includes(position)) {
-        throw new Error('Position already reveled');
+        throw new RoundDomainException('Position already revealed');
     }
 
     round.revealedPositions.push(position);
