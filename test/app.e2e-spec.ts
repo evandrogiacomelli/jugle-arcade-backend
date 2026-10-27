@@ -14,6 +14,19 @@ describe('RoundsController (e2e)', () => {
       mineCount: dto.mineCount,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     })),
+
+    findById: jest.fn().mockImplementation(async (id: number) => {
+
+      if (id !== 1) return null;
+
+      return {
+        id,
+        status: 'PENDING',
+        mineCount: 5,
+        revealedPositions: [],
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      }
+    }),
   };
 
   beforeAll(async () => {
@@ -88,5 +101,27 @@ describe('RoundsController (e2e)', () => {
         .expect(400);
 
     expect(roundsService.create).not.toHaveBeenCalled();
+  });
+
+  it('should return a round by id', async () => {
+    const response = await request(app.getHttpServer())
+        .get('/rounds/1')
+        .expect(200);
+
+    expect(response.body).toMatchObject({
+      id: 1,
+      status: 'PENDING',
+      mineCount: 5,
+      revealedPositions: [],
+    });
+
+    expect(response.body).not.toHaveProperty('minePositions');
+    expect(roundsService.findById).toHaveBeenCalledWith(1);
+  });
+
+  it('should return 404 when round does not exist', async () => {
+    await request(app.getHttpServer())
+        .get('/rounds/999')
+        .expect(404);
   });
 });

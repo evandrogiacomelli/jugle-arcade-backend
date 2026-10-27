@@ -26,4 +26,20 @@ export class RoundsService {
             createdAt: round.createdAt,
         };
     }
+
+    async findById(id: number) {
+        const round = await this.em.findOne(GameRound, { id });
+
+        if (!round) {
+            return null;
+        }
+
+        return {
+            id: round.id,
+            status: round.status,
+            mineCount: round.mineCount,
+            revealedPositions: round.revealedPositions,
+            createdAt: round.createdAt,
+        };
+    }
 }
