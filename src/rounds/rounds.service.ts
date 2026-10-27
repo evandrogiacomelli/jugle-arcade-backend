@@ -11,6 +11,8 @@ export class RoundsService {
         const round = this.em.create(GameRound, {
             status: 'PENDING',
             mineCount: dto.mineCount,
+            minePositions: [],
+            revealedPositions: [],
             createdAt: new Date(),
         });
 

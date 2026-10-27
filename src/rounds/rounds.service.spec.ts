@@ -35,11 +35,16 @@ describe('RoundsService', () => {
     it('should create a round', async () => {
         const result = await service.create({ mineCount: 5 });
 
-        expect(em.create).toHaveBeenCalledWith(GameRound, {
-            status: 'PENDING',
-            mineCount: 5,
-            createdAt: expect.any(Date),
-        });
+        expect(em.create).toHaveBeenCalledWith(
+            GameRound,
+            expect.objectContaining({
+                status: 'PENDING',
+                mineCount: 5,
+                minePositions: expect.any(Array),
+                revealedPositions: [],
+                createdAt: expect.any(Date),
+            }),
+        );
         expect(em.persist).toHaveBeenCalledWith(expect.objectContaining({
             status: 'PENDING',
             mineCount: 5,
