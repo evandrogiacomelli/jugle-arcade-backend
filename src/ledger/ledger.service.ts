@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/postgresql';
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+    UnprocessableEntityException,
+} from '@nestjs/common';
 import { LockMode } from '@mikro-orm/core';
+import { EntityManager } from '@mikro-orm/postgresql';
 
 import { LedgerEntry, LedgerEntryType } from './domain/ledger-entry.entity';
 import { Wallet } from '../wallets/domain/wallet.entity';
@@ -18,22 +23,22 @@ export class LedgerService {
 
     async create(input: CreateLedgerEntryInput) {
         if (!Number.isInteger(input.amount) || input.amount <= 0) {
-            throw new Error('Amount must be a positive integer');
+            throw new BadRequestException('Amount must be a positive integer');
         }
 
         if (!['CREDIT', 'DEBIT'].includes(input.type)) {
-            throw new Error('Invalid ledger entry type');
+            throw new BadRequestException('Invalid ledger entry type');
         }
 
         return this.em.transactional(async (em) => {
             const wallet = await em.findOne(
                 Wallet,
                 { id: input.walletId },
-                { lockMode:  LockMode.PESSIMISTIC_WRITE },
+                { lockMode: LockMode.PESSIMISTIC_WRITE },
             );
 
             if (!wallet) {
-                throw new Error('Wallet not found');
+                throw new NotFoundException('Wallet not found');
             }
 
             const newBalance =
@@ -42,7 +47,7 @@ export class LedgerService {
                     : wallet.balance - input.amount;
 
             if (newBalance < 0) {
-                throw new Error('Insufficient balance');
+                throw new UnprocessableEntityException('Insufficient balance');
             }
 
             wallet.balance = newBalance;
