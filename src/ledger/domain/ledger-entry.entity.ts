@@ -4,6 +4,7 @@ import {
     ManyToOne,
     PrimaryKey,
     Property,
+    Unique
 } from '@mikro-orm/decorators/legacy';
 
 import { Wallet } from '../../wallets/domain/wallet.entity';
@@ -18,6 +19,10 @@ export type LedgerEntryType = 'CREDIT' | 'DEBIT';
 @Check({
     name: 'ledger_entry_amount_positive_check',
     expression: '"amount" > 0',
+})
+@Unique({
+    name: 'ledger_entry_wallet_idempotency_key_unique',
+    properties: ['wallet', 'idempotencyKey'],
 })
 export class LedgerEntry {
     @PrimaryKey({ type: 'number', autoincrement: true })
