@@ -43,6 +43,9 @@ export class LedgerEntry {
     @Property({ type: 'string' })
     description!: string;
 
+    @Property({ type: 'number', nullable: true })
+    balanceAfter?: number;
+
     @Property({ type: Date })
     createdAt: Date = new Date();
 }

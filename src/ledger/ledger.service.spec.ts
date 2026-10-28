@@ -31,10 +31,24 @@ describe('LedgerService', () => {
         jest.clearAllMocks();
         wallet.balance = 100;
 
-        transactionEm.findOne.mockResolvedValue(wallet);
+        transactionEm.findOne
+            .mockReset()
+            .mockImplementation(async (entity) => {
+                if (entity === Wallet) {
+                    return wallet;
+                }
+
+                if (entity === LedgerEntry) {
+                    return null;
+                }
+
+                return null;
+            });
+
         transactionEm.create.mockImplementation(
             (_entity, data) => ({ id: 10, ...data }),
-            );
+        );
+
         transactionEm.flush.mockResolvedValue(undefined);
 
         const module: TestingModule = await Test.createTestingModule({
@@ -57,7 +71,7 @@ describe('LedgerService', () => {
     it('should credit the wallet and create a CREDIT entry', async () => {
         const result = await service.create({
             walletId: 1,
-            idempotencyKey: 'test-idempotency-key',
+            idempotencyKey: 'test-credit-entry',
             type: 'CREDIT',
             amount: 50,
             description: 'Test credit',
@@ -88,7 +102,7 @@ describe('LedgerService', () => {
     it('should debit the wallet and create a DEBIT entry', async () => {
         const result = await service.create({
             walletId: 1,
-            idempotencyKey: 'test-idempotency-key',
+            idempotencyKey: 'test-debit-entry',
             type: 'DEBIT',
             amount: 30,
             description: 'Test debit',
@@ -109,7 +123,7 @@ describe('LedgerService', () => {
         await expect(
         service.create({
             walletId: 1,
-            idempotencyKey: 'test-idempotency-key',
+            idempotencyKey: 'test-excessive-debit',
             type: 'DEBIT',
             amount: 101,
             description: 'Excessive debit',
@@ -120,12 +134,19 @@ describe('LedgerService', () => {
     });
 
     it('should reject a wallet that does not exist', async () => {
-        transactionEm.findOne.mockResolvedValue(null);
+
+        transactionEm.findOne.mockImplementation(async (entity) => {
+            if (entity === Wallet) {
+                return null;
+            }
+
+            return null;
+        });
 
         await expect(
             service.create({
                 walletId: 999,
-                idempotencyKey: 'test-idempotency-key',
+                idempotencyKey: 'test-missing-wallet',
                 type: 'CREDIT',
                 amount: 10,
                 description: 'Missing wallet',
@@ -142,7 +163,7 @@ describe('LedgerService', () => {
             await expect(
                 service.create({
                     walletId: 1,
-                    idempotencyKey: 'test-idempotency-key',
+                    idempotencyKey: 'test-invalid-amount',
                     type: 'CREDIT',
                     amount,
                     description: 'Invalid amount',
@@ -158,7 +179,7 @@ describe('LedgerService', () => {
         await expect(
             service.create({
                 walletId: 1,
-                idempotencyKey: 'test-idempotency-key',
+                idempotencyKey: 'test-invalid-type',
                 type: 'INVALID' as 'CREDIT',
                 amount: 10,
                 description: 'Invalid type',

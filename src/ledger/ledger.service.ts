@@ -3,6 +3,7 @@ import {
     Injectable,
     NotFoundException,
     UnprocessableEntityException,
+    ConflictException,
 } from '@nestjs/common';
 import { LockMode } from '@mikro-orm/core';
 import { EntityManager } from '@mikro-orm/postgresql';
@@ -52,6 +53,34 @@ export class LedgerService {
                 throw new NotFoundException('Wallet not found');
             }
 
+            const existingEntry = await em.findOne(LedgerEntry, {
+                wallet: wallet.id,
+                idempotencyKey: input.idempotencyKey,
+            });
+
+            if (existingEntry) {
+                const sameOperation =
+                    existingEntry.type === input.type &&
+                    existingEntry.amount === input.amount &&
+                    existingEntry.description === input.description;
+
+                if (!sameOperation) {
+                    throw new ConflictException(
+                        'Idempotency-Key has already been used with different data',
+                    );
+                }
+
+                return {
+                    id: existingEntry.id,
+                    walletId: wallet.id,
+                    type: existingEntry.type,
+                    amount: existingEntry.amount,
+                    description: existingEntry.description,
+                    balanceAfter: existingEntry.balanceAfter,
+                    createdAt: existingEntry.createdAt,
+                };
+            }
+
             const newBalance =
                 input.type === 'CREDIT'
                     ? wallet.balance + input.amount
@@ -68,6 +97,8 @@ export class LedgerService {
                 type: input.type,
                 amount: input.amount,
                 description: input.description,
+                idempotencyKey: input.idempotencyKey,
+                balanceAfter: newBalance,
                 createdAt: new Date(),
             });
 

@@ -119,6 +119,107 @@ describe('LedgerController (e2e)', () => {
         expect(entriesAfterFailure).toHaveLength(2);
     });
 
+    it('should not apply the same credit twice when the idempotency key is reused', async () => {
+        const playerResponse = await request(app.getHttpServer())
+            .post('/players')
+            .send({ displayName: `ledger-idempotency-${Date.now()}` })
+            .expect(201);
+
+        const idempotentPlayerId: number = playerResponse.body.id;
+        const idempotentWalletId: number = playerResponse.body.wallet.id;
+
+        try {
+            const payload = {
+                type: 'CREDIT',
+                amount: 100,
+                description: 'Idempotency test credit',
+            };
+
+            const firstResponse = await request(app.getHttpServer())
+                .post(`/wallets/${idempotentWalletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-idempotency-credit')
+                .send(payload)
+                .expect(201);
+
+            const repeatedResponse = await request(app.getHttpServer())
+                .post(`/wallets/${idempotentWalletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-idempotency-credit')
+                .send(payload)
+                .expect(201);
+
+            expect(repeatedResponse.body).toEqual(firstResponse.body);
+
+            em.clear();
+
+            const wallet = await em.findOneOrFail(Wallet, {
+                id: idempotentWalletId,
+            });
+
+            expect(wallet.balance).toBe(100);
+
+            const entries = await em.find(LedgerEntry, {
+                wallet: { id: idempotentWalletId },
+            });
+
+            expect(entries).toHaveLength(1);
+        } finally {
+            await em.nativeDelete(LedgerEntry, {
+                wallet: idempotentWalletId,
+            });
+            await em.nativeDelete(Wallet, {
+                id: idempotentWalletId,
+            });
+            await em.nativeDelete(Player, {
+                id: idempotentPlayerId,
+            });
+        }
+    });
+
+    it('should reject reusing an idempotency key with different data', async () => {
+        const playerResponse = await request(app.getHttpServer())
+            .post('/players')
+            .send({ displayName: `ledger-conflict-${Date.now()}` })
+            .expect(201);
+
+        const playerId: number = playerResponse.body.id;
+        const walletId: number = playerResponse.body.wallet.id;
+
+        try {
+            await request(app.getHttpServer())
+                .post(`/wallets/${walletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-idempotency-conflict')
+                .send({
+                    type: 'CREDIT',
+                    amount: 100,
+                    description: 'Original credit',
+                })
+                .expect(201);
+
+            await request(app.getHttpServer())
+                .post(`/wallets/${walletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-idempotency-conflict')
+                .send({
+                    type: 'CREDIT',
+                    amount: 200,
+                    description: 'Different credit',
+                })
+                .expect(409);
+
+            em.clear();
+
+            const wallet = await em.findOneOrFail(Wallet, { id: walletId });
+            expect(wallet.balance).toBe(100);
+
+            const entries = await em.find(LedgerEntry, {
+                wallet: { id: walletId },
+            });
+            expect(entries).toHaveLength(1);
+        } finally {
+            await em.nativeDelete(LedgerEntry, { wallet: walletId });
+            await em.nativeDelete(Wallet, { id: walletId });
+            await em.nativeDelete(Player, { id: playerId });
+        }
+    });
 
     it('should prevent concurrent debits from overspending the wallet', async () => {
         const playerResponse = await request(app.getHttpServer())
