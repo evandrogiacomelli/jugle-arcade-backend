@@ -2,6 +2,7 @@ import { EntityManager } from '@mikro-orm/postgresql';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameRound } from './domain/game-round.entity';
 import { RoundsService } from './rounds.service';
+import { RoundsGateway } from "./rounds.gateway";
 
 describe('RoundsService', () => {
     let service: RoundsService;
@@ -28,6 +29,7 @@ describe('RoundsService', () => {
             providers: [
                 RoundsService,
                 { provide: EntityManager, useValue: em },
+                {provide: RoundsGateway, useValue: { emitRoundUpdate: jest.fn() } }
             ],
         }).compile();
 

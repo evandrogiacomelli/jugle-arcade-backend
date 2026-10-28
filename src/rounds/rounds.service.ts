@@ -64,7 +64,7 @@ export class RoundsService {
             status: round.status,
             position,
             result,
-            revealedPosition: round.revealedPositions,
+            revealedPositions: round.revealedPositions,
         }
 
         this.roundsGateway.emitRoundUpdate(response);

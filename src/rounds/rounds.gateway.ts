@@ -28,7 +28,7 @@ export class RoundsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         status: string,
         position: number,
         result: string,
-        revealedPosition: number[],
+        revealedPositions: number[],
     }) {
         this.server.emit('round.update', round);
     }
