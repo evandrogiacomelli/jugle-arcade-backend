@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Headers,
     Param,
     ParseIntPipe,
     Post,
@@ -16,10 +17,12 @@ export class LedgerController {
     @Post()
     create(
         @Param('walletId', ParseIntPipe) walletId: number,
+        @Headers('idempotency-key') idempotencyKey: string,
         @Body() dto: CreateLedgerEntryDto,
     ) {
         return this.ledgerService.create({
             walletId,
+            idempotencyKey,
             type: dto.type,
             amount: dto.amount,
             description: dto.description,

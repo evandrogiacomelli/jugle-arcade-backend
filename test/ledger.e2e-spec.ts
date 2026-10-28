@@ -61,6 +61,7 @@ describe('LedgerController (e2e)', () => {
 
         await request(app.getHttpServer())
             .post(`/wallets/${walletId}/ledger`)
+            .set('Idempotency-Key', 'e2e-integration-credit')
             .send({
                 type: 'CREDIT',
                 amount: 100,
@@ -70,6 +71,7 @@ describe('LedgerController (e2e)', () => {
 
         await request(app.getHttpServer())
             .post(`/wallets/${walletId}/ledger`)
+            .set('Idempotency-Key', 'e2e-integration-debit')
             .send({
                 type: 'DEBIT',
                 amount: 30,
@@ -94,6 +96,7 @@ describe('LedgerController (e2e)', () => {
 
         await request(app.getHttpServer())
             .post(`/wallets/${walletId}/ledger`)
+            .set('Idempotency-Key', 'e2e-excessive-debit')
             .send({
                 type: 'DEBIT',
                 amount: 71,
@@ -129,6 +132,7 @@ describe('LedgerController (e2e)', () => {
         try {
             await request(app.getHttpServer())
                 .post(`/wallets/${concurrentWalletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-race-credit')
                 .send({
                     type: 'CREDIT',
                     amount: 100,
@@ -139,6 +143,7 @@ describe('LedgerController (e2e)', () => {
             const responses = await Promise.all([
                 request(app.getHttpServer())
                     .post(`/wallets/${concurrentWalletId}/ledger`)
+                    .set('Idempotency-Key', 'e2e-race-debit-a')
                     .send({
                         type: 'DEBIT',
                         amount: 80,
@@ -146,6 +151,7 @@ describe('LedgerController (e2e)', () => {
                     }),
                 request(app.getHttpServer())
                     .post(`/wallets/${concurrentWalletId}/ledger`)
+                    .set('Idempotency-Key', 'e2e-race-debit-b')
                     .send({
                         type: 'DEBIT',
                         amount: 80,
@@ -158,7 +164,7 @@ describe('LedgerController (e2e)', () => {
                 422,
             ]);
 
-            await em.clear();
+            em.clear();
 
             const wallet = await em.findOneOrFail(Wallet, {
                 id: concurrentWalletId,
@@ -198,6 +204,7 @@ describe('LedgerController (e2e)', () => {
         try {
             await request(app.getHttpServer())
                 .post(`/wallets/${rollbackWalletId}/ledger`)
+                .set('Idempotency-Key', 'e2e-rollback-credit')
                 .send({
                     type: 'CREDIT',
                     amount: 100,
@@ -228,6 +235,7 @@ describe('LedgerController (e2e)', () => {
 
                 await request(app.getHttpServer())
                     .post(`/wallets/${rollbackWalletId}/ledger`)
+                    .set('Idempotency-Key', 'e2e-rollback-debit')
                     .send({
                         type: 'DEBIT',
                         amount: 40,

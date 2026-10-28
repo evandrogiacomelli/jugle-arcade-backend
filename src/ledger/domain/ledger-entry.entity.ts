@@ -23,6 +23,9 @@ export class LedgerEntry {
     @PrimaryKey({ type: 'number', autoincrement: true })
     id!: number;
 
+    @Property({ type: 'string', nullable: true, length: 100 })
+    idempotencyKey?: string;
+
     @ManyToOne(() => Wallet)
     wallet!: Wallet;
 

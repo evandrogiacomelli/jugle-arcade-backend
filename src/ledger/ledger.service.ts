@@ -11,7 +11,8 @@ import { LedgerEntry, LedgerEntryType } from './domain/ledger-entry.entity';
 import { Wallet } from '../wallets/domain/wallet.entity';
 
 interface CreateLedgerEntryInput {
-    walletId: number;
+    walletId: number
+    idempotencyKey: string;
     type: LedgerEntryType;
     amount: number;
     description: string;
@@ -22,12 +23,22 @@ export class LedgerService {
     constructor(private readonly em: EntityManager) {}
 
     async create(input: CreateLedgerEntryInput) {
+
         if (!Number.isInteger(input.amount) || input.amount <= 0) {
             throw new BadRequestException('Amount must be a positive integer');
         }
 
         if (!['CREDIT', 'DEBIT'].includes(input.type)) {
             throw new BadRequestException('Invalid ledger entry type');
+        }
+
+        if (
+            typeof input.idempotencyKey !== 'string' ||
+            !/^[A-Za-z0-9._:-]{1,100}$/.test(input.idempotencyKey)
+        ) {
+            throw new BadRequestException(
+                'Idempotency-Key must contain 1 to 100 valid characters',
+            );
         }
 
         return this.em.transactional(async (em) => {
