@@ -8,6 +8,8 @@ import { LedgerEntry } from '../src/ledger/domain/ledger-entry.entity';
 import { Player } from '../src/players/domain/player.entity';
 import { Wallet } from '../src/wallets/domain/wallet.entity';
 
+import { LedgerService } from '../src/ledger/ledger.service';
+
 describe('LedgerController (e2e)', () => {
     let app: INestApplication;
     let em: EntityManager;
@@ -179,6 +181,72 @@ describe('LedgerController (e2e)', () => {
             });
             await em.nativeDelete(Player, {
                 id: concurrentPlayerId,
+            });
+        }
+    });
+
+
+    it('should roll back the wallet balance if ledger persistence fails', async () => {
+        const playerResponse = await request(app.getHttpServer())
+            .post('/players')
+            .send({ displayName: `ledger-rollback-${Date.now()}` })
+            .expect(201);
+
+        const rollbackPlayerId: number = playerResponse.body.id;
+        const rollbackWalletId: number = playerResponse.body.wallet.id;
+
+        try {
+            await request(app.getHttpServer())
+                .post(`/wallets/${rollbackWalletId}/ledger`)
+                .send({
+                    type: 'CREDIT',
+                    amount: 100,
+                    description: 'Rollback test credit',
+                })
+                .expect(201);
+
+
+            const ledgerService = app.get(LedgerService);
+            const emSpy = jest.spyOn(ledgerService['em'], 'transactional');
+
+            try {
+                emSpy.mockImplementationOnce(async (callback: any) => {
+                    return ledgerService['em'].transactional(async (txEm) => {
+                        const originalFlush = txEm.flush.bind(txEm);
+
+                        jest.spyOn(txEm, 'flush').mockImplementationOnce(async () => {
+                            throw new Error('Simulated persistence failure');
+                        });
+
+                        try {
+                            return await callback(txEm);
+                        } finally {
+                            txEm.flush = originalFlush;
+                        }
+                    });
+                });
+
+                await request(app.getHttpServer())
+                    .post(`/wallets/${rollbackWalletId}/ledger`)
+                    .send({
+                        type: 'DEBIT',
+                        amount: 40,
+                        description: 'Debit that should roll back',
+                    })
+                    .expect(500);
+            } finally {
+                emSpy.mockRestore();
+            }
+
+        } finally {
+            await em.nativeDelete(LedgerEntry, {
+                wallet: rollbackWalletId,
+            });
+            await em.nativeDelete(Wallet, {
+                id: rollbackWalletId,
+            });
+            await em.nativeDelete(Player, {
+                id: rollbackPlayerId,
             });
         }
     });
