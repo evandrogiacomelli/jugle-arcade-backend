@@ -3,10 +3,14 @@ import { EntityManager } from '@mikro-orm/postgresql';
 import { GameRound } from './domain/game-round.entity';
 import { CreateRoundDto } from './dto/create-round.dto';
 import { revealPosition } from './domain/reveal-position';
+import {RoundsGateway} from "./rounds.gateway";
 
 @Injectable()
 export class RoundsService {
-    constructor(private readonly em: EntityManager) {}
+    constructor(
+        private readonly em: EntityManager,
+        private readonly roundsGateway: RoundsGateway
+    ) {}
 
     async create(dto: CreateRoundDto): Promise<{ id: number, status: string, mineCount: number, createdAt: Date }> {
         const round = this.em.create(GameRound, {
@@ -55,12 +59,16 @@ export class RoundsService {
 
         await this.em.flush();
 
-        return {
+        const response = {
             id: round.id,
             status: round.status,
             position,
             result,
-            revealedPositions: round.revealedPositions,
-        };
+            revealedPosition: round.revealedPositions,
+        }
+
+        this.roundsGateway.emitRoundUpdate(response);
+
+        return response;
     }
 }
