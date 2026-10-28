@@ -113,4 +113,73 @@ describe('LedgerController (e2e)', () => {
 
         expect(entriesAfterFailure).toHaveLength(2);
     });
+
+
+    it('should prevent concurrent debits from overspending the wallet', async () => {
+        const playerResponse = await request(app.getHttpServer())
+            .post('/players')
+            .send({ displayName: `ledger-race-${Date.now()}` })
+            .expect(201);
+
+        const concurrentPlayerId: number = playerResponse.body.id;
+        const concurrentWalletId: number = playerResponse.body.wallet.id;
+
+        try {
+            await request(app.getHttpServer())
+                .post(`/wallets/${concurrentWalletId}/ledger`)
+                .send({
+                    type: 'CREDIT',
+                    amount: 100,
+                    description: 'Concurrency test credit',
+                })
+                .expect(201);
+
+            const responses = await Promise.all([
+                request(app.getHttpServer())
+                    .post(`/wallets/${concurrentWalletId}/ledger`)
+                    .send({
+                        type: 'DEBIT',
+                        amount: 80,
+                        description: 'Concurrent debit A',
+                    }),
+                request(app.getHttpServer())
+                    .post(`/wallets/${concurrentWalletId}/ledger`)
+                    .send({
+                        type: 'DEBIT',
+                        amount: 80,
+                        description: 'Concurrent debit B',
+                    }),
+            ]);
+
+            expect(responses.map((response) => response.status).sort()).toEqual([
+                201,
+                422,
+            ]);
+
+            await em.clear();
+
+            const wallet = await em.findOneOrFail(Wallet, {
+                id: concurrentWalletId,
+            });
+
+            expect(wallet.balance).toBe(20);
+
+            const entries = await em.find(LedgerEntry, {
+                wallet: { id: concurrentWalletId },
+            });
+
+            expect(entries).toHaveLength(2);
+            expect(entries.filter((entry) => entry.type === 'DEBIT')).toHaveLength(1);
+        } finally {
+            await em.nativeDelete(LedgerEntry, {
+                wallet: concurrentWalletId,
+            });
+            await em.nativeDelete(Wallet, {
+                id: concurrentWalletId,
+            });
+            await em.nativeDelete(Player, {
+                id: concurrentPlayerId,
+            });
+        }
+    });
 });
