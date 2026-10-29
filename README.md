@@ -1,132 +1,113 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Jungle Arcade Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend API for a Mines-style game, built with NestJS, TypeScript, MikroORM, and PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The project focuses on game logic, wallet management, transactional consistency, idempotency, and real-time round updates.
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **NestJS** — application framework and dependency injection
+- **TypeScript** — application language
+- **MikroORM** — ORM and database persistence
+- **PostgreSQL** — relational database
+- **Docker** — local database environment
+- **Jest** — unit and end-to-end testing
+- **Socket.IO** — real-time game updates
 
-## Project setup
+## Features
 
-```bash
-$ npm install
-```
+### Game Rounds
+- Create and retrieve game rounds.
+- Generate mine positions.
+- Reveal board positions and validate game rules.
+- Track round states and revealed positions.
 
-## Compile and run the project
+### Players and Wallets
+- Create players with associated wallets.
+- Track wallet balances through ledger entries.
 
-```bash
-# development
-$ npm run start
+### Transactional Ledger
+- Record wallet credits and debits.
+- Use database transactions to keep wallet balances and ledger entries consistent.
+- Apply pessimistic locking to protect concurrent wallet operations.
+- Use idempotency keys to prevent duplicate operations.
+- Enforce database constraints for data integrity.
+- Store the resulting wallet balance in each ledger entry.
 
-# watch mode
-$ npm run start:dev
+### Real-Time Updates
+- Emit round updates through WebSockets using Socket.IO.
 
-# production mode
-$ npm run start:prod
-```
+## API Endpoints
 
-## Run tests
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/rounds` | Create a game round |
+| `GET` | `/rounds/:id` | Retrieve a game round |
+| `POST` | `/rounds/:id/reveal` | Reveal a board position |
+| `POST` | `/players` | Create a player and wallet |
 
-```bash
-# unit tests
-$ npm run test
+## Architecture
 
-# e2e tests
-$ npm run test:e2e
+The application follows a **modular monolith** approach, separating responsibilities into modules and keeping game rules distinct from HTTP handling.
 
-# test coverage
-$ npm run test:cov
-```
+- **Controllers:** handle HTTP requests and responses.
+- **Services:** coordinate application use cases.
+- **Domain entities and logic:** represent game and ledger concepts and enforce business rules.
+- **MikroORM and PostgreSQL:** handle persistence and database integrity.
+- **WebSocket gateway:** broadcasts round updates to connected clients.
 
-## Deployment
+## Data Consistency
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+The ledger implements several mechanisms to protect financial operations:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- **Transactions:** wallet updates and ledger entries are committed or rolled back together.
+- **Pessimistic locking:** prevents concurrent operations on the same wallet from using stale balances.
+- **Idempotency:** repeated requests with the same key and payload return the previous result; reuse with different data is rejected.
+- **Database constraints:** enforce positive transaction amounts and unique idempotency keys per wallet.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+## Testing
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The project includes unit tests and end-to-end tests covering game rules, round operations, wallet transactions, concurrent debits, and transaction rollback.
 
-## Observability
+Latest verified test results:
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+- **25 unit tests passed**
+- **15 end-to-end tests passed**
+- **40 tests passed in total**
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+## Running Locally
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+### Requirements
 
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
+- Node.js
+- npm
+- Docker
+
+### Setup
 
 ```bash
-$ npx @nestjs/observe link
+npm install
+docker compose up -d
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+Configure the PostgreSQL connection using the project's environment or application configuration.
 
-Or do it by hand:
+Run database migrations if required by the current setup, then start the application:
 
 ```bash
-$ npm install @nestjs/observe
+npm run start:dev
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
+### Build and Tests
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```bash
+npm run build
+npm run test -- --runInBand
+npm run test:e2e -- --runInBand
+```
 
-## Resources
+## Project Scope
 
-Check out a few resources that may come in handy when working with NestJS:
+This project was developed as an MVP to explore backend architecture, domain logic, database consistency, concurrency control, idempotency, automated testing, and real-time communication.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The application currently uses a modular monolith architecture. WebSocket updates are broadcast to connected clients; per-round rooms and production-grade WebSocket authorization are outside the current scope.
